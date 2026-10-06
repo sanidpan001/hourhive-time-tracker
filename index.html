@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HourHive — Free Project Time Tracker & Billable Hours App</title>
+<meta name="description" content="HourHive is a free time tracker with no signup: track project hours with start/stop timers, billable rates, idle detection, weekly charts, per-project donut, manual entries, and invoice-ready CSV export. Works 100% offline in your browser.">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: { hive:'#1a1611', comb:'#241e14', edge:'#3a3122', amberx:'#fbbf24', mintx:'#34d399' },
+    fontFamily: { disp:['"Sora"','ui-sans-serif','system-ui','sans-serif'], mono2:['"JetBrains Mono"','ui-monospace','monospace'] }
+  }}
+};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  body { background:#1a1611; color:#f5efe2; font-family:'Sora',ui-sans-serif,system-ui,sans-serif; }
+  .hivecard { background:linear-gradient(165deg,#241e14 0%,#1d1811 100%); border:1px solid #3a3122; }
+  .hivecard:hover { border-color:#57492e; }
+  .comb-pattern {
+    background-image: radial-gradient(circle at 1px 1px, rgba(251,191,36,.07) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  .num-glow { text-shadow:0 0 26px rgba(251,191,36,.35); }
+  .bar-col { transition:height .6s cubic-bezier(.22,1,.36,1); }
+  details.faq summary { cursor:pointer; list-style:none; }
+  details.faq summary::-webkit-details-marker { display:none; }
+  details.faq[open] .faq-plus { transform:rotate(45deg); }
+  .faq-plus { transition:transform .2s ease; }
+  input, select { color-scheme: dark; }
+  input[type="time"]::-webkit-calendar-picker-indicator, input[type="date"]::-webkit-calendar-picker-indicator { cursor:pointer; }
+  .hex { clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%); }
+  .timer-digit { font-variant-numeric: tabular-nums; }
+  @keyframes pulse-dot { 0%,100% { opacity:1; transform:scale(1);} 50% { opacity:.45; transform:scale(.8);} }
+  .rec-dot { animation:pulse-dot 1.2s ease-in-out infinite; }
+  @media (max-width:640px){ .stat-num{ font-size:1.4rem; } }
+</style>
+</head>
+<body id="top" class="min-h-screen comb-pattern">
+
+<!-- ================= HEADER ================= -->
+<header class="sticky top-0 z-50 border-b border-edge/70" style="background:rgba(26,22,17,.94);backdrop-filter:blur(10px)">
+  <div class="mx-auto max-w-6xl px-4 sm:px-6 py-3 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <span class="hex inline-flex h-10 w-10 items-center justify-center" style="background:linear-gradient(135deg,#fbbf24,#f59e0b)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a1611" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
+      </span>
+      <span class="font-disp text-xl font-extrabold tracking-tight">Hour<span style="color:#fbbf24">Hive</span></span>
+    </a>
+    <nav class="flex items-center gap-5 text-sm">
+      <a href="#top" class="text-stone-300 hover:text-amberx transition">Home</a>
+      <a href="https://fixoraa.tech" class="text-stone-300 hover:text-amberx transition">More Tools</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section class="mx-auto max-w-6xl px-4 sm:px-6 pt-10 pb-2">
+  <div class="flex flex-wrap items-center gap-3 mb-4">
+    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold" style="background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.35)">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+      Unlimited Free Usage
+    </span>
+    <span class="text-xs text-stone-500">No signup · No paywall · 100% offline</span>
+  </div>
+  <h1 class="font-disp text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+    Project Time Tracking, <span style="background:linear-gradient(90deg,#fbbf24,#34d399);-webkit-background-clip:text;background-clip:text;color:transparent">Honey-Sweet &amp; Simple</span>
+  </h1>
+  <p class="mt-3 max-w-2xl text-stone-400 text-sm sm:text-base">
+    HourHive is a <em class="not-italic text-stone-200">free time tracker with no signup</em>: create projects with billable rates, start and stop timers with one tap, spot idle time before it pollutes your invoice, and export invoice-ready CSVs — all stored privately in your browser.
+  </p>
+</section>
+
+<!-- TOP AD (verbatim) -->
+<div class="no-print mx-auto max-w-6xl px-4 sm:px-6 pt-4" role="complementary" aria-label="Advertisement">
+  <div class="mx-auto text-center" style="max-width:728px">
+    <span class="block text-[10px] tracking-[0.18em] uppercase text-slate-400 mb-1.5">Advertisement</span>
+    <div class="flex justify-center overflow-hidden">
+      <div class="origin-top scale-[0.44] sm:scale-100 shrink-0">
+        <script>
+          atOptions = { 'key' : '4e68ac77881c17fe128a46565d9a4e8c', 'format' : 'iframe', 'height' : 90, 'width' : 728, 'params' : {} };
+        </script>
+        <script src="https://www.highrevenueformat.com/4e68ac77881c17fe128a46565d9a4e8c/invoke.js"></script>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TOOL ================= -->
+<main class="mx-auto max-w-6xl px-4 sm:px-6 py-8">
+
+  <!-- STATS ROW -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+    <div class="hivecard rounded-2xl p-4 sm:p-5">
+      <div class="text-[11px] uppercase tracking-[0.15em] text-stone-500 mb-1">Tracked today</div>
+      <div id="stat-today" class="stat-num font-mono2 text-2xl sm:text-3xl font-bold num-glow" style="color:#fbbf24">0s</div>
+    </div>
+    <div class="hivecard rounded-2xl p-4 sm:p-5">
+      <div class="text-[11px] uppercase tracking-[0.15em] text-stone-500 mb-1">This week</div>
+      <div id="stat-week" class="stat-num font-mono2 text-2xl sm:text-3xl font-bold" style="color:#34d399">0s</div>
+    </div>
+    <div class="hivecard rounded-2xl p-4 sm:p-5">
+      <div class="text-[11px] uppercase tracking-[0.15em] text-stone-500 mb-1">Billable this week</div>
+      <div id="stat-billable" class="stat-num font-disp text-2xl sm:text-3xl font-bold text-stone-100">$0.00</div>
+    </div>
+    <div class="hivecard rounded-2xl p-4 sm:p-5">
+      <div class="text-[11px] uppercase tracking-[0.15em] text-stone-500 mb-1">Active projects</div>
+      <div id="stat-projects" class="stat-num font-disp text-2xl sm:text-3xl font-bold text-stone-100">0</div>
+    </div>
+  </div>
+
+  <!-- TIMER CONSOLE + PROJECTS -->
+  <div class="grid lg:grid-cols-5 gap-4 mb-6">
+    <!-- Timer console -->
+    <div class="hivecard rounded-2xl p-5 sm:p-6 lg:col-span-3">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-disp text-lg font-bold">Timer Console</h2>
+        <span id="timer-state" class="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-500">
+          <span id="timer-dot" class="rec-dot inline-block h-2.5 w-2.5 rounded-full bg-stone-600"></span>
+          <span id="timer-state-text">Idle</span>
+        </span>
+      </div>
+      <div class="text-center py-4 rounded-xl border border-edge bg-black/30 mb-4">
+        <div id="timer-display" class="timer-digit font-mono2 text-5xl sm:text-6xl font-bold" style="color:#fbbf24">00:00:00</div>
+        <div id="timer-project-name" class="text-xs text-stone-500 mt-2">No project selected</div>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <div>
+          <label for="timer-project" class="block text-xs text-stone-400 mb-1">Project</label>
+          <select id="timer-project" class="w-full rounded-xl bg-hive border border-edge px-3 py-2.5 text-sm outline-none focus:border-amberx"></select>
+        </div>
+        <div class="flex items-end">
+          <button id="timer-start-btn" class="w-full px-6 py-2.5 rounded-xl font-bold text-sm transition hover:opacity-90" style="background:linear-gradient(90deg,#fbbf24,#f59e0b);color:#1a1611">Start timer</button>
+        </div>
+      </div>
+      <p class="text-xs text-stone-500 mt-3">Starting a new timer automatically stops the running one and banks its entry. Idle detection watches for inactivity while a timer runs.</p>
+    </div>
+
+    <!-- Projects -->
+    <div class="hivecard rounded-2xl p-5 lg:col-span-2">
+      <h2 class="font-disp text-lg font-bold mb-3">Projects &amp; Rates</h2>
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label for="proj-name" class="block text-xs text-stone-400 mb-1">Project name</label>
+          <input id="proj-name" type="text" maxlength="80" placeholder="e.g. Acme Website" class="w-full rounded-xl bg-hive border border-edge px-3 py-2.5 text-sm outline-none focus:border-amberx">
+        </div>
+        <div>
+          <label for="proj-rate" class="block text-xs text-stone-400 mb-1">Rate $/hr</label>
+          <input id="proj-rate" type="number" min="0" step="0.01" placeholder="50" class="w-full rounded-xl bg-hive border border-edge px-3 py-2.5 text-sm outline-none focus:border-amberx">
+        </div>
+      </div>
+      <p id="proj-error" class="hidden text-xs text-red-400 mb-2"></p>
+      <button id="add-proj-btn" class="w-full px-6 py-2.5 rounded-xl font-bold text-sm transition hover:opacity-90" style="background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.4)">Add project</button>
+      <ul id="projects-list" class="mt-4 space-y-2 max-h-64 overflow-y-auto"></ul>
+    </div>
+  </div>
+
+  <!-- CHARTS: WEEKLY BARS + DONUT -->
+  <div class="grid lg:grid-cols-2 gap-4 mb-6">
+    <div class="hivecard rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-disp text-lg font-bold">Weekly Time</h2>
+        <div class="flex items-center gap-2">
+          <button id="week-prev-btn" class="px-2.5 py-1 rounded-lg border border-edge text-stone-400 hover:text-amberx hover:border-amberx transition text-sm">‹</button>
+          <span id="week-label" class="text-xs text-stone-400 font-mono2"></span>
+          <button id="week-next-btn" class="px-2.5 py-1 rounded-lg border border-edge text-stone-400 hover:text-amberx hover:border-amberx transition text-sm">›</button>
+        </div>
+      </div>
+      <div id="week-chart" class="flex items-end justify-between gap-1.5 sm:gap-2.5 h-44"></div>
+      <div id="week-total" class="text-xs text-stone-500 mt-3"></div>
+    </div>
+    <div class="hivecard rounded-2xl p-5">
+      <h2 class="font-disp text-lg font-bold mb-4">Per-Project Split</h2>
+      <div class="flex flex-col sm:flex-row items-center gap-5">
+        <div class="relative shrink-0" style="width:150px;height:150px">
+          <svg id="donut-chart" viewBox="0 0 150 150" class="w-full h-full -rotate-90" role="img" aria-label="Per-project time donut"></svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span id="donut-total" class="font-mono2 text-xl font-bold" style="color:#fbbf24">0h</span>
+            <span class="text-[10px] text-stone-500 uppercase tracking-widest">tracked</span>
+          </div>
+        </div>
+        <ul id="donut-legend" class="flex-1 w-full space-y-2 text-sm max-h-44 overflow-y-auto"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANUAL ENTRY + EXPORT/BACKUP -->
+  <div class="grid lg:grid-cols-5 gap-4 mb-6">
+    <div class="hivecard rounded-2xl p-5 lg:col-span-3">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-disp text-lg font-bold" id="entry-form-title">Manual Entry</h2>
+        <button id="cancel-edit-btn" class="hidden text-xs px-3 py-1.5 rounded-lg border border-edge text-stone-400 hover:text-red-400 hover:border-red-400 transition">Cancel edit</button>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div class="col-span-2 sm:col-span-1">
+          <label for="entry-project" class="block text-xs text-stone-400 mb-1">Project</label>
+          <select id="entry-project" class="w-full rounded-xl bg-hive border border-edge px-3 py-2.5 text-sm outline-none focus:border-amberx"></select>
+        </div>
+        <div>
+          <label for="entry-date" class="block text-xs text-stone-400 mb-1">Date</label>
+          <input id="entry-date" type="date" class="w-full rounded-xl bg-hive border border-edge px-3 py-2.5 text-sm outline-none focus:border-amberx">
+        </div>
+        <div>
+          <label for="entry-note" class="block text-xs text-stone-400 mb-1">Note (optional)</label>
+          <input id="entry-note" type="text" maxlength="200" placeholder="What did you do?" class="w-full rounded-xl bg-hive border border-edge px-3 py-2.5 text-sm outline-none focus:border-amberx">
+        </div>
+        <div>
+          <label for="entry-start" class="block text-xs text-stone-400 mb-1">Start</label>
+          <input id="entry-start" type="time" class="w-full rounded-xl bg-hive border border-edge px-3 py-2.5 text-sm outline-none focus:border-amberx">
+        </div>
+        <div>
+          <label for="entry-end" class="block text-xs text-stone-400 mb-1">End</label>
+          <input id="entry-end" type="time" class="w-full rounded-xl bg-hive border border-edge px-3 py-2.5 text-sm outline-none focus:border-amberx">
+        </div>
+        <div class="flex items-end">
+          <button id="add-entry-btn" class="w-full px-4 py-2.5 rounded-xl font-bold text-sm transition hover:opacity-90" style="background:linear-gradient(90deg,#fbbf24,#f59e0b);color:#1a1611">Add entry</button>
+        </div>
+      </div>
+      <p id="entry-error" class="hidden text-xs text-red-400 mt-2"></p>
+      <h3 class="font-disp text-sm font-bold mt-5 mb-2 text-stone-300">Recent entries</h3>
+      <ul id="entries-list" class="space-y-2 max-h-72 overflow-y-auto"></ul>
+    </div>
+
+    <div class="lg:col-span-2 space-y-4">
+      <div class="hivecard rounded-2xl p-5">
+        <h2 class="font-disp text-lg font-bold mb-1">Idle Detection</h2>
+        <p class="text-xs text-stone-500 mb-3">If no mouse/keyboard activity happens for longer than this while a timer runs, HourHive asks what to do with the idle stretch.</p>
+        <div class="flex items-center gap-3">
+          <label for="idle-minutes" class="text-xs text-stone-400">Prompt after</label>
+          <input id="idle-minutes" type="number" min="1" max="240" value="15" class="w-20 rounded-xl bg-hive border border-edge px-3 py-2 text-sm outline-none focus:border-amberx">
+          <span class="text-xs text-stone-400">minutes idle</span>
+        </div>
+      </div>
+      <div class="hivecard rounded-2xl p-5">
+        <h2 class="font-disp text-lg font-bold mb-1">Export &amp; Backup</h2>
+        <p class="text-xs text-stone-500 mb-4">Invoice-ready CSV lists every entry with hours, rate, and billable amount. JSON backup saves everything for restore on another device.</p>
+        <div class="grid grid-cols-2 gap-3">
+          <button id="export-csv-btn" class="px-4 py-2.5 rounded-xl font-bold text-sm transition hover:opacity-90" style="background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.4)">Export CSV</button>
+          <button id="backup-btn" class="px-4 py-2.5 rounded-xl font-bold text-sm transition hover:opacity-90 border border-edge text-stone-300 hover:border-amberx hover:text-amberx">Backup JSON</button>
+        </div>
+        <input id="restore-input" type="file" accept="application/json,.json" class="hidden">
+        <button id="restore-btn" class="mt-3 w-full px-4 py-2.5 rounded-xl font-bold text-sm transition border border-edge text-stone-300 hover:border-amberx hover:text-amberx">Restore from backup…</button>
+        <p id="restore-msg" class="hidden text-xs mt-2"></p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- IDLE PROMPT MODAL -->
+<div id="idle-banner" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4" style="background:rgba(0,0,0,.65)">
+  <div class="hivecard rounded-2xl p-6 max-w-sm w-full" role="dialog" aria-modal="true" aria-labelledby="idle-title">
+    <h3 id="idle-title" class="font-disp text-lg font-bold mb-2" style="color:#fbbf24">You've been idle</h3>
+    <p id="idle-text" class="text-sm text-stone-400 mb-5">No activity detected for a while. What should HourHive do with the idle stretch?</p>
+    <div class="space-y-2">
+      <button id="idle-keep-btn" class="w-full px-4 py-2.5 rounded-xl font-bold text-sm transition hover:opacity-90" style="background:linear-gradient(90deg,#fbbf24,#f59e0b);color:#1a1611">Keep tracking (I was working)</button>
+      <button id="idle-trim-btn" class="w-full px-4 py-2.5 rounded-xl font-bold text-sm transition hover:opacity-90" style="background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.4)">Bank up to last activity, keep timer running</button>
+      <button id="idle-stop-btn" class="w-full px-4 py-2.5 rounded-xl font-bold text-sm transition border border-edge text-stone-300 hover:border-red-400 hover:text-red-400">Stop timer at last activity</button>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM AD (verbatim) -->
+<div class="no-print mx-auto max-w-6xl px-4 sm:px-6 pb-4" role="complementary" aria-label="Advertisement">
+  <div class="mx-auto text-center" style="max-width:728px">
+    <span class="block text-[10px] tracking-[0.18em] uppercase text-slate-400 mb-1.5">Advertisement</span>
+    <div class="flex justify-center overflow-hidden">
+      <script async src="https://js.wpadmngr.com/static/adManager.js" data-admpid="464498"></script>
+    </div>
+  </div>
+</div>
+<!-- ================= SEO ARTICLE ================= -->
+<article id="seo-article" class="mx-auto max-w-4xl px-4 sm:px-6 pb-10 text-stone-300 text-[15px] leading-7">
+  <h2 class="font-disp text-2xl sm:text-3xl font-bold text-stone-100 mb-5">The Complete Guide to Project Time Tracking (Without the Signup Hassle)</h2>
+
+  <p>If you bill clients by the hour, the most expensive minutes of your week are the ones you forget to write down. Freelancers, consultants, agencies, and even salaried side-hustlers lose real money every month to untracked time: the fifteen minutes of "quick feedback" that turned into forty-five, the bug fix you did between meetings, the research rabbit hole that actually moved the project forward. A <strong>project time tracking app</strong> exists to solve exactly this problem — turning your workday into an accurate, invoice-ready record instead of a foggy memory you reconstruct on Friday evening. And the best kind is a <strong>free time tracker with no signup</strong>, because the moment a tool asks for an email address, a workspace invite, and a credit card "just for the trial," most people never come back.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-stone-100 mt-8 mb-3">Why project-based tracking beats generic timers</h3>
+  <p>There are two kinds of time tools. Timecard calculators ask "when did your shift start and end?" — fine for hourly employees, useless for knowledge workers juggling five clients. A <strong>project time tracking app</strong> flips the model: you create a project, attach a billable rate, and run a dedicated timer for that work. The difference shows up at invoicing time. Instead of one blob of "8.5 hours Tuesday," you get "Acme Website — 3h 12m @ $75/hr = $240" and "Beta App bugfix — 1h 05m @ $60/hr = $65." That granularity is what clients pay for without arguing, and it is what lets you see which projects are profitable and which are quietly eating your week. HourHive is built around this project-first model: every second you track belongs to a project with its own rate, and the dashboard always shows the money, not just the minutes.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-stone-100 mt-8 mb-3">The billable hours tracker mindset: track money, not just minutes</h3>
+  <p>A generic stopwatch tells you that you worked six hours. A <strong>billable hours tracker</strong> tells you that those six hours are worth $412.50 — and that number changes behavior. When you see the dollar figure ticking up next to a timer, you naturally protect deep-work blocks, say no to low-value interruptions, and stop giving away "quick calls" for free. The second shift is rate honesty: many freelancers undercharge because they estimate time from memory and memory is generous to everyone except the person doing the estimating. Studies of professional services consistently find that people under-report their own working time by 10–25% when reconstructing it later. An always-on project timer removes the reconstruction entirely. You press start when work starts, stop when it stops, and the <strong>billable hours tracker</strong> does the arithmetic — hours × rate, per project, per week, exportable to CSV.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-stone-100 mt-8 mb-3">Idle detection: the feature that saves your invoices</h3>
+  <p>Every timer-based tool has the same dirty secret: you start a timer, get pulled into a meeting, answer messages, make coffee — and three hours later the timer is still running on a project you touched for forty minutes. Inflated hours are worse than forgotten hours, because they erode client trust when someone questions the invoice. Idle detection fixes this at the source. HourHive watches for mouse and keyboard activity while a timer runs; if nothing happens for longer than your threshold (say, 15 minutes), it pauses everything and asks: keep tracking as if you were working, bank the time up to your last activity and keep the timer running, or stop the timer at your last activity. This one prompt is the difference between a time log you can defend line-by-line and one you quietly round down before sending. It is also one of the rarest features in free trackers — most either lack it entirely or lock it behind a paid plan.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-stone-100 mt-8 mb-3">Manual entries: because real life is not a stopwatch</h3>
+  <p>No timer survives contact with a real workday. You take a client call on your phone while walking. You whiteboard for an hour in a room with no laptop. You remember at 6pm that you never started the timer for the morning's deep-work session. A <strong>project time tracking app</strong> without manual entry is a leaky bucket — people quietly stop using it the first week it fails them. The fix is a fast manual-entry form: pick the project, the date, start and end times, an optional note, done. HourHive also lets you edit any entry later — wrong project, wrong time, typo in the note — because the first version of a time log is a draft, not a contract. Entries that span midnight are split correctly across days in the weekly chart, so a 10pm–2am session counts where it belongs.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-stone-100 mt-8 mb-3">Reading your week: bar charts and per-project donuts</h3>
+  <p>Raw time logs are data; charts are insight. The weekly bar chart answers "where did this week go?" at a glance — seven bars, Monday to Sunday, one tap to step back to previous weeks. Patterns jump out immediately: the Wednesday that vanished into admin, the Friday with four untracked hours, the weekend creep you should be billing. The per-project donut answers the money question: what share of your effort went to each client, and what is each slice worth at its own rate. Together they power the two conversations that matter most for freelancers: the one with the client ("here is exactly what your retainer bought") and the one with yourself ("this low-rate project is taking 40% of my week — time to renegotiate or replace it"). A good <strong>billable hours tracker</strong> makes both conversations take thirty seconds.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-stone-100 mt-8 mb-3">Invoice-ready CSV: from tracking to getting paid</h3>
+  <p>Tracking time you never invoice is a hobby; the CSV export is what turns it into revenue. HourHive's export is built for real invoicing workflows: one row per entry with the date, project name, start and end times, duration in decimal hours, the project's rate, the computed billable amount, and your note. Decimal hours (1.50 instead of 1h 30m) matter because every invoicing tool on earth — from spreadsheets to accounting software — multiplies hours × rate, and decimals drop straight in. Import the CSV into your invoice template, group by project, and you have line items with dates and descriptions attached. That paper trail is also your defense if a client ever asks "what exactly did those 12 hours cover?" — each row answers with a date, times, and a note.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-stone-100 mt-8 mb-3">Why a free time tracker with no signup wins</h3>
+  <p>Here is the honest economics of time tracking tools: the big platforms are free for one user and expensive the moment you add a team, or they are free for 30 days and then hold your historical data hostage. Search for "free time tracker no signup" and you will still find plenty of tools that demand an email address on step two. A <strong>free time tracker with no signup</strong> has a different contract — no account means no subscription to cancel, no pricing page to dread, and no onboarding flow between you and your first tracked minute. HourHive stores everything in your browser's localStorage: your projects, rates, entries, and running timer state never leave your device. That is a privacy feature as much as a convenience one — your client list and rates are genuinely sensitive business data, and "we would never look" is weaker than "we physically cannot see it." The tradeoff is real and worth stating plainly: browser storage lives on one device, so the JSON backup/restore exists for moving between machines or surviving a browser reset. Export a backup monthly; it takes five seconds.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-stone-100 mt-8 mb-3">How to set up your first productive week</h3>
+  <p>Start with projects, not timers. List every client and internal project you will touch this month, and give each an honest billable rate — including internal work, where the "rate" is your target effective hourly income, because it reveals what admin tasks really cost you. Add a project for non-billable overhead too (email, bookkeeping, learning); it is the only way to see your true utilization. Then run one timer at a time — HourHive stops the previous timer automatically when you start a new one, which enforces the single-tasking that makes time logs accurate. Set the idle threshold to 10–15 minutes: shorter and you get nagged during thinking time; longer and idle stretches pollute entries. At the end of each day, spend two minutes scanning the entries list: fix anything the idle prompt missed, add manual entries for phone calls and meetings, and write short notes on billable rows ("drafted homepage copy," not "work"). On Friday, export the CSV before you invoice — future you, the one who gets paid on time, will be grateful.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-stone-100 mt-8 mb-3">Utilization: the metric freelancers ignore until it hurts</h3>
+  <p>Billable hours get the attention, but utilization — billable hours divided by total working hours — is the number that decides your income. If you track 40 hours in a week and 22 were billable, your utilization is 55%, and your effective hourly rate is barely half your headline rate. Most freelancers discover their utilization is 20–30 points lower than they guessed, because overhead is invisible until it is measured. The per-project donut makes this visible: the gray slice of non-billable time sitting next to client slices is hard to ignore. Improving utilization is rarely about working more; it is about batching admin, templating proposals, and noticing which clients generate disproportionate overhead. Track for a month before drawing conclusions — one weird week is noise, four weeks is a business insight.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-stone-100 mt-8 mb-3">Common time-tracking mistakes (and how HourHive prevents them)</h3>
+  <p>Mistake one is tracking in 15-minute rounded chunks from memory — it systematically undercounts short tasks and overcounts long ones. A running timer with second precision, banked exactly, beats it every time. Mistake two is one giant "Client Work" project; without per-project rates and splits, you cannot tell profitable clients from time sinks, so create the projects up front. Mistake three is never reviewing: a tracker you only open to start and stop timers is a stopwatch, not a <strong>project time tracking app</strong> — the weekly chart review is where the value compounds. Mistake four is timer shame, letting a timer run through lunch "to look productive"; idle detection exists precisely so honest tracking is also easy tracking. And mistake five is no backup discipline — browser storage is private and fast, but it is still one device, so export the JSON backup on the same schedule you back up anything else you care about.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-stone-100 mt-8 mb-3">Who HourHive is for</h3>
+  <p>Freelance designers, developers, writers, and marketers who invoice by the hour are the obvious fit — the billable math and CSV export are built for them. Consultants juggling retainers use the per-project donut to prove value at renewal time. Agencies run it per team member to see true project costs before quoting the next engagement. But the quiet power users are people who never send an invoice: students tracking study blocks per subject, job seekers measuring applications versus interview prep, indie hackers comparing hours invested across side projects. Anywhere the question is "where did my time actually go, and was it worth it," a <strong>free time tracker with no signup</strong> that answers in minutes and dollars earns its place as a daily habit.</p>
+
+  <p class="mt-8 text-stone-400">Start your first timer today. Create a project, set your rate, press start — and this Friday, invoice with numbers you can defend instead of hours you have to reconstruct.</p>
+</article>
+
+<!-- ================= FAQS ================= -->
+<section class="mx-auto max-w-4xl px-4 sm:px-6 pb-12">
+  <h2 class="font-disp text-2xl font-bold text-stone-100 mb-5">Frequently asked questions</h2>
+  <div class="space-y-3">
+    <details class="faq hivecard rounded-2xl p-4">
+      <summary class="flex items-center justify-between font-medium text-stone-100">Is HourHive really a free time tracker with no signup?<span class="faq-plus text-amberx text-xl leading-none">+</span></summary>
+      <p class="mt-2 text-sm text-stone-400 leading-6">Yes. There is no account, no email required, no trial, and no paywall — every feature, including idle detection, CSV export, and backup/restore, is free forever. Your projects, rates, and time entries are stored in your browser's localStorage and never sent to any server.</p>
+    </details>
+    <details class="faq hivecard rounded-2xl p-4">
+      <summary class="flex items-center justify-between font-medium text-stone-100">How do billable rates and the invoice-ready CSV work?<span class="faq-plus text-amberx text-xl leading-none">+</span></summary>
+      <p class="mt-2 text-sm text-stone-400 leading-6">Each project gets its own hourly rate. Every tracked second is converted to decimal hours and multiplied by that project's rate, so the dashboard always shows the dollar value of your time. The CSV export lists one row per entry — date, project, start/end times, duration in hours, rate, billable amount, and your note — ready to import into any invoicing tool or spreadsheet.</p>
+    </details>
+    <details class="faq hivecard rounded-2xl p-4">
+      <summary class="flex items-center justify-between font-medium text-stone-100">How does idle detection work?<span class="faq-plus text-amberx text-xl leading-none">+</span></summary>
+      <p class="mt-2 text-sm text-stone-400 leading-6">While a timer runs, HourHive watches for mouse and keyboard activity. If nothing happens for longer than your threshold (default 15 minutes, adjustable from 1 to 240), it shows a prompt with three choices: keep tracking as normal, bank the time up to your last activity and keep the timer running, or stop the timer at your last activity. This keeps forgotten-timer inflation out of your invoices.</p>
+    </details>
+    <details class="faq hivecard rounded-2xl p-4">
+      <summary class="flex items-center justify-between font-medium text-stone-100">Can I add or edit time entries manually?<span class="faq-plus text-amberx text-xl leading-none">+</span></summary>
+      <p class="mt-2 text-sm text-stone-400 leading-6">Yes. The manual entry form lets you log any past work with project, date, start/end times, and a note — perfect for phone calls, meetings, or sessions you forgot to time. Every entry in the recent-entries list can be edited or deleted, so your log stays accurate without starting over.</p>
+    </details>
+    <details class="faq hivecard rounded-2xl p-4">
+      <summary class="flex items-center justify-between font-medium text-stone-100">What do the weekly bar chart and per-project donut show?<span class="faq-plus text-amberx text-xl leading-none">+</span></summary>
+      <p class="mt-2 text-sm text-stone-400 leading-6">The weekly bar chart shows total tracked time for each day, Monday to Sunday, with arrows to browse previous weeks — entries crossing midnight are split correctly across days. The donut breaks the selected week down by project, showing each project's share of hours and its billable value at its own rate.</p>
+    </details>
+    <details class="faq hivecard rounded-2xl p-4">
+      <summary class="flex items-center justify-between font-medium text-stone-100">Where is my data stored, and how do backups work?<span class="faq-plus text-amberx text-xl leading-none">+</span></summary>
+      <p class="mt-2 text-sm text-stone-400 leading-6">Everything lives in your browser's localStorage — HourHive works fully offline and your client list and rates never leave your device. Because browser storage is per-device, the Backup button downloads a JSON file with all projects and entries; Restore validates that file and loads it back, which also lets you move your data to another computer.</p>
+    </details>
+  </div>
+</section>
+
+<footer class="border-t border-edge/60 py-6 text-center text-xs text-stone-600">
+  HourHive — track every hour, bill every minute.
+</footer>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Is HourHive really a free time tracker with no signup?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. No account, no email, no trial, and no paywall. All features are free, and all data stays in your browser's localStorage, never sent to a server." } },
+    { "@type": "Question", "name": "How do billable rates and the invoice-ready CSV work?", "acceptedAnswer": { "@type": "Answer", "text": "Each project has its own hourly rate. Tracked time is converted to decimal hours and multiplied by the rate. The CSV export lists date, project, start/end times, duration, rate, billable amount, and note per entry, ready for invoicing tools." } },
+    { "@type": "Question", "name": "How does idle detection work?", "acceptedAnswer": { "@type": "Answer", "text": "While a timer runs, HourHive watches for mouse and keyboard activity. After the idle threshold passes, it prompts you to keep tracking, bank time up to last activity, or stop the timer at last activity." } },
+    { "@type": "Question", "name": "Can I add or edit time entries manually?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. A manual entry form logs past work with project, date, times, and note, and every entry can be edited or deleted from the recent-entries list." } },
+    { "@type": "Question", "name": "What do the weekly bar chart and per-project donut show?", "acceptedAnswer": { "@type": "Answer", "text": "The weekly bar chart shows daily tracked time Monday to Sunday with week navigation; the donut breaks a week down by project with each project's hour share and billable value." } },
+    { "@type": "Question", "name": "Where is my data stored, and how do backups work?", "acceptedAnswer": { "@type": "Answer", "text": "All data lives in your browser's localStorage and works offline. The Backup button downloads a JSON file of all projects and entries, and Restore validates and reloads it, including on another device." } }
+  ]
+}
+</script>
+
+<script id="v3-hourhive-time-tracker-lib">
+'use strict';
+/* =========================================================================
+ * HourHive — pure logic lib (v3-hourhive-time-tracker)
+ * Project-based offline time tracking: duration math, billable totals,
+ * weekly aggregation, invoice-ready CSV, JSON backup validation.
+ *
+ * PURE FUNCTIONS ONLY: no DOM access, no browser globals, no storage, no network.
+ * ========================================================================= */
+
+var MS_PER_DAY = 86400000;
+
+/* ---------- small helpers ---------- */
+
+function pad2(n) {
+  n = Math.floor(n);
+  return (n < 10 ? '0' : '') + n;
+}
+
+function toNumber(v) {
+  if (v === null || v === undefined || v === '') return null;
+  var n = Number(String(v).trim());
+  return isFinite(n) ? n : null;
+}
+
+function round2(n) {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+function isPos(n) {
+  return typeof n === 'number' && isFinite(n) && n > 0;
+}
+
+/* ---------- duration formatting ---------- */
+
+function fmtDur(sec) {
+  sec = Math.max(0, Math.round(sec));
+  var h = Math.floor(sec / 3600);
+  var m = Math.floor((sec % 3600) / 60);
+  var s = sec % 60;
+  if (h > 0) return h + 'h ' + pad2(m) + 'm';
+  if (m > 0) return m + 'm ' + pad2(s) + 's';
+  return s + 's';
+}
+
+function fmtHMS(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  var h = Math.floor(sec / 3600);
+  var m = Math.floor((sec % 3600) / 60);
+  var s = sec % 60;
+  return pad2(h) + ':' + pad2(m) + ':' + pad2(s);
+}
+
+function secsToHours(sec) {
+  var n = toNumber(sec);
+  if (n === null) return null;
+  return round2(n / 3600);
+}
+
+function fmtMoney(n, sym) {
+  sym = sym || '$';
+  var x = toNumber(n);
+  if (x === null) return sym + '0.00';
+  return sym + round2(x).toFixed(2);
+}
+
+/* ---------- rates & billable ---------- */
+
+function parseRate(v) {
+  var n = toNumber(v);
+  if (n === null || n < 0) return null;
+  return round2(n);
+}
+
+function billable(sec, rate) {
+  var s = toNumber(sec);
+  var r = toNumber(rate);
+  if (s === null || r === null || s < 0 || r < 0) return null;
+  return round2((s / 3600) * r);
+}
+
+/* ---------- ids ---------- */
+
+function newId(prefix) {
+  prefix = prefix || 'x';
+  return prefix + Date.now().toString(36) + Math.floor(Math.random() * 46656).toString(36);
+}
+
+/* ---------- project validation ---------- */
+
+function normName(name) {
+  if (name === undefined || name === null) return '';
+  return String(name).trim();
+}
+
+function validateProject(p) {
+  var errors = [];
+  var name = normName(p && p.name);
+  if (!name) errors.push('Project name is required.');
+  if (name.length > 80) errors.push('Project name must be 80 characters or less.');
+  var rate = parseRate(p && p.rate);
+  if (rate === null) errors.push('Billable rate must be a non-negative number.');
+  if (errors.length) return { ok: false, errors: errors, project: null };
+  return {
+    ok: true,
+    errors: [],
+    project: { id: (p && p.id) || newId('p'), name: name, rate: rate }
+  };
+}
+
+/* ---------- entries & day ranges ---------- */
+
+function validDateStr(s) {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  var parts = s.split('-').map(Number);
+  var d = new Date(parts[0], parts[1] - 1, parts[2]);
+  return d.getFullYear() === parts[0] && d.getMonth() === parts[1] - 1 && d.getDate() === parts[2];
+}
+
+/* Local-midnight range for a YYYY-MM-DD date. Returns {start,end} ms or null. */
+function dayRangeMs(dateStr) {
+  if (!validDateStr(dateStr)) return null;
+  var parts = dateStr.split('-').map(Number);
+  var d = new Date(parts[0], parts[1] - 1, parts[2]);
+  var start = d.getTime();
+  return { start: start, end: start + MS_PER_DAY };
+}
+
+/* Normalize a stored entry: {id, projectId, start, end, note}. end may be null
+ * for a still-running timer; callers can pass nowMs to close it. */
+function normEntry(e, nowMs) {
+  if (!e || typeof e !== 'object') return null;
+  var start = toNumber(e.start);
+  if (start === null || start <= 0) return null;
+  var end = toNumber(e.end);
+  if (end === null && nowMs !== undefined) end = toNumber(nowMs);
+  if (end === null) return null;
+  if (end < start) return null;
+  return {
+    id: e.id || newId('e'),
+    projectId: e.projectId || '',
+    start: Math.floor(start),
+    end: Math.floor(end),
+    note: normName(e.note).slice(0, 200)
+  };
+}
+
+function entrySeconds(e) {
+  var n = normEntry(e);
+  if (!n) return null;
+  return Math.round((n.end - n.start) / 1000);
+}
+
+/* Seconds of an entry that fall inside [rangeStart, rangeEnd) ms. */
+function overlapSeconds(entry, rangeStart, rangeEnd, nowMs) {
+  var n = normEntry(entry, nowMs);
+  if (!n) return 0;
+  var s = Math.max(n.start, rangeStart);
+  var x = Math.min(n.end, rangeEnd);
+  return Math.max(0, Math.round((x - s) / 1000));
+}
+
+function secondsOnDate(entries, dateStr, nowMs) {
+  var r = dayRangeMs(dateStr);
+  if (!r) return null;
+  var total = 0;
+  (entries || []).forEach(function (e) {
+    total += overlapSeconds(e, r.start, r.end, nowMs);
+  });
+  return total;
+}
+
+/* ---------- weekly aggregation (Monday-start weeks) ---------- */
+
+function weekStartMs(dateStr) {
+  var r = dayRangeMs(dateStr);
+  if (!r) return null;
+  var d = new Date(r.start);
+  var dow = (d.getDay() + 6) % 7; // 0 = Monday
+  return r.start - dow * MS_PER_DAY;
+}
+
+function dateStrOfMs(ms) {
+  var d = new Date(ms);
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+}
+
+var WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/* 7 buckets for the Monday-start week containing anyDateStr.
+ * Returns null on bad input, else {weekStart:'YYYY-MM-DD', days:[{date,label,seconds}]} */
+function weeklyBuckets(entries, anyDateStr, nowMs) {
+  var ws = weekStartMs(anyDateStr);
+  if (ws === null) return null;
+  var days = [];
+  for (var i = 0; i < 7; i++) {
+    var dayStart = ws + i * MS_PER_DAY;
+    var total = 0;
+    (entries || []).forEach(function (e) {
+      total += overlapSeconds(e, dayStart, dayStart + MS_PER_DAY, nowMs);
+    });
+    days.push({ date: dateStrOfMs(dayStart), label: WEEK_LABELS[i], seconds: total });
+  }
+  return { weekStart: dateStrOfMs(ws), days: days };
+}
+
+/* ---------- per-project totals & donut ---------- */
+
+function projectTotals(entries, projects, nowMs) {
+  var byId = {};
+  (projects || []).forEach(function (p) {
+    if (p && p.id) byId[p.id] = { id: p.id, name: String(p.name || 'Untitled'), rate: parseRate(p.rate) === null ? 0 : parseRate(p.rate), seconds: 0 };
+  });
+  (entries || []).forEach(function (e) {
+    var n = normEntry(e, nowMs);
+    if (!n) return;
+    var secs = Math.round((n.end - n.start) / 1000);
+    if (byId[n.projectId]) {
+      byId[n.projectId].seconds += secs;
+    } else {
+      var key = '__unknown__';
+      if (!byId[key]) byId[key] = { id: key, name: 'Archived / unknown', rate: 0, seconds: 0 };
+      byId[key].seconds += secs;
+    }
+  });
+  return Object.keys(byId).map(function (k) {
+    var t = byId[k];
+    t.hours = round2(t.seconds / 3600);
+    t.billable = round2(t.hours * t.rate);
+    return t;
+  });
+}
+
+function grandTotals(entries, projects, nowMs) {
+  var list = projectTotals(entries, projects, nowMs);
+  var seconds = 0, billableSum = 0;
+  list.forEach(function (t) { seconds += t.seconds; billableSum += t.billable; });
+  return {
+    seconds: seconds,
+    hours: round2(seconds / 3600),
+    billable: round2(billableSum),
+    projectCount: (projects || []).filter(function (p) { return p && p.id; }).length
+  };
+}
+
+/* Donut segments as fractions of total tracked time (0 when nothing tracked). */
+function donutSegments(entries, projects, nowMs) {
+  var list = projectTotals(entries, projects, nowMs).filter(function (t) { return t.seconds > 0; });
+  var total = list.reduce(function (a, t) { return a + t.seconds; }, 0);
+  return list.map(function (t) {
+    return {
+      id: t.id, name: t.name, seconds: t.seconds, hours: t.hours, billable: t.billable,
+      frac: total > 0 ? t.seconds / total : 0
+    };
+  }).sort(function (a, b) { return b.seconds - a.seconds; });
+}
+
+/* ---------- manual entry validation ---------- */
+
+function validateEntry(inp, projects) {
+  var errors = [];
+  var known = {};
+  (projects || []).forEach(function (p) { if (p && p.id) known[p.id] = true; });
+  var projectId = String((inp && inp.projectId) || '');
+  if (!projectId || !known[projectId]) errors.push('Choose a valid project.');
+
+  var date = String((inp && inp.date) || '');
+  if (!validDateStr(date)) errors.push('Enter a valid date (YYYY-MM-DD).');
+
+  var st = String((inp && inp.startTime) || '');
+  var en = String((inp && inp.endTime) || '');
+  var tm = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  if (!tm.test(st)) errors.push('Start time must be HH:MM (24h).');
+  if (!tm.test(en)) errors.push('End time must be HH:MM (24h).');
+
+  var start = null, end = null;
+  if (!errors.length) {
+    var parts = date.split('-').map(Number);
+    var sp = st.split(':'), ep = en.split(':');
+    start = new Date(parts[0], parts[1] - 1, parts[2], Number(sp[0]), Number(sp[1]), 0).getTime();
+    end = new Date(parts[0], parts[1] - 1, parts[2], Number(ep[0]), Number(ep[1]), 0).getTime();
+    if (end <= start) errors.push('End time must be after start time.');
+    if (end - start > 24 * 3600 * 1000) errors.push('A single entry cannot exceed 24 hours.');
+  }
+
+  if (errors.length) return { ok: false, errors: errors, entry: null };
+  return {
+    ok: true,
+    errors: [],
+    entry: {
+      id: (inp && inp.id) || newId('e'),
+      projectId: projectId,
+      start: start,
+      end: end,
+      note: normName(inp && inp.note).slice(0, 200)
+    }
+  };
+}
+
+/* ---------- invoice-ready CSV ---------- */
+
+function csvEscape(v) {
+  var s = (v === undefined || v === null) ? '' : String(v);
+  if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function entryDateLabel(ms) { return dateStrOfMs(ms); }
+function entryTimeLabel(ms) {
+  var d = new Date(ms);
+  return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+
+/* Invoice-ready CSV: one row per closed entry, sorted by start time. */
+function buildCSV(entries, projects) {
+  var header = 'Date,Project,Start,End,Duration (h),Rate,Billable,Note';
+  var nameById = {};
+  var rateById = {};
+  (projects || []).forEach(function (p) {
+    if (p && p.id) { nameById[p.id] = String(p.name || 'Untitled'); rateById[p.id] = parseRate(p.rate) === null ? 0 : parseRate(p.rate); }
+  });
+  var rows = [];
+  (entries || []).forEach(function (e) {
+    var n = normEntry(e);
+    if (!n) return; // running (open) timers are not invoiced
+    var secs = Math.round((n.end - n.start) / 1000);
+    var hours = round2(secs / 3600);
+    var rate = rateById[n.projectId] === undefined ? 0 : rateById[n.projectId];
+    var bill = round2(hours * rate);
+    rows.push({
+      start: n.start,
+      cells: [
+        entryDateLabel(n.start),
+        nameById[n.projectId] || 'Archived / unknown',
+        entryTimeLabel(n.start),
+        entryTimeLabel(n.end),
+        hours.toFixed(2),
+        rate.toFixed(2),
+        bill.toFixed(2),
+        n.note
+      ].map(csvEscape).join(',')
+    });
+  });
+  rows.sort(function (a, b) { return a.start - b.start; });
+  var lines = [header].concat(rows.map(function (r) { return r.cells; }));
+  return lines.join('\r\n');
+}
+
+/* ---------- JSON backup / restore ---------- */
+
+function buildBackup(state) {
+  var projects = (state && state.projects) || [];
+  var entries = (state && state.entries) || [];
+  return JSON.stringify({
+    app: 'hourhive',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    projects: projects,
+    entries: entries
+  }, null, 2);
+}
+
+function validateBackup(text) {
+  var errors = [];
+  var data = null;
+  try { data = JSON.parse(text); }
+  catch (e) { return { ok: false, errors: ['Not valid JSON.'], data: null }; }
+  if (!data || typeof data !== 'object') return { ok: false, errors: ['Backup is empty.'], data: null };
+  if (data.app !== 'hourhive') errors.push('Not an HourHive backup file.');
+  if (!Array.isArray(data.projects)) errors.push('Backup is missing a projects array.');
+  if (!Array.isArray(data.entries)) errors.push('Backup is missing an entries array.');
+
+  var projects = [], entries = [];
+  if (!errors.length) {
+    data.projects.forEach(function (p, i) {
+      var v = validateProject({ id: p && p.id, name: p && p.name, rate: p && p.rate });
+      if (!v.ok) errors.push('Project #' + (i + 1) + ': ' + v.errors.join(' '));
+      else projects.push(v.project);
+    });
+    data.entries.forEach(function (e, i) {
+      var n = normEntry(e);
+      if (!n) { errors.push('Entry #' + (i + 1) + ': invalid start/end times.'); return; }
+      if (!projects.some(function (p) { return p.id === n.projectId; })) {
+        n.projectId = '__archived__';
+      }
+      entries.push(n);
+    });
+  }
+  if (errors.length) return { ok: false, errors: errors, data: null };
+  return { ok: true, errors: [], data: { projects: projects, entries: entries } };
+}
+
+/* ---------- idle detection ---------- */
+
+function idleMs(lastActivityMs, nowMs) {
+  var a = toNumber(lastActivityMs), n = toNumber(nowMs);
+  if (a === null || n === null) return null;
+  return Math.max(0, n - a);
+}
+
+/* True when the gap since last activity exceeds the threshold (minutes). */
+function shouldPromptIdle(lastActivityMs, nowMs, thresholdMin) {
+  var gap = idleMs(lastActivityMs, nowMs);
+  var t = toNumber(thresholdMin);
+  if (gap === null || t === null || t <= 0) return false;
+  return gap > t * 60000;
+}
+
+/* Trim a running timer so the tracked entry ends at trimEndMs (e.g. last
+ * activity). Returns the closed entry or null if invalid. */
+function trimRunningTimer(running, trimEndMs) {
+  if (!running || !running.projectId) return null;
+  var start = toNumber(running.startMs);
+  var end = toNumber(trimEndMs);
+  if (start === null || end === null || end <= start) return null;
+  return { id: newId('e'), projectId: running.projectId, start: Math.floor(start), end: Math.floor(end), note: '' };
+}
+
+/* ---------- exports (for the test harness) ---------- */
+
+var HourHive = {
+  pad2: pad2, toNumber: toNumber, round2: round2, isPos: isPos,
+  fmtDur: fmtDur, fmtHMS: fmtHMS, secsToHours: secsToHours, fmtMoney: fmtMoney,
+  parseRate: parseRate, billable: billable, newId: newId,
+  validateProject: validateProject,
+  validDateStr: validDateStr, dayRangeMs: dayRangeMs,
+  normEntry: normEntry, entrySeconds: entrySeconds, overlapSeconds: overlapSeconds,
+  secondsOnDate: secondsOnDate,
+  weekStartMs: weekStartMs, dateStrOfMs: dateStrOfMs, WEEK_LABELS: WEEK_LABELS,
+  weeklyBuckets: weeklyBuckets,
+  projectTotals: projectTotals, grandTotals: grandTotals, donutSegments: donutSegments,
+  validateEntry: validateEntry,
+  csvEscape: csvEscape, buildCSV: buildCSV,
+  buildBackup: buildBackup, validateBackup: validateBackup,
+  idleMs: idleMs, shouldPromptIdle: shouldPromptIdle, trimRunningTimer: trimRunningTimer
+};
+
+</script>
+<script>
+/* HourHive UI — DOM wiring only. All math lives in the lib block above. */
+(function () {
+  'use strict';
+  var LS_KEY = 'hourhive-v3';
+  var DONUT_COLORS = ['#fbbf24', '#34d399', '#fb7185', '#60a5fa', '#a78bfa', '#f472b6', '#2dd4bf', '#facc15'];
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s === undefined || s === null ? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function load() {
+    try { var v = localStorage.getItem(LS_KEY); if (v) { var d = JSON.parse(v); return { projects: d.projects || [], entries: d.entries || [], running: d.running || null }; } } catch (e) {}
+    return { projects: [], entries: [], running: null };
+  }
+  function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
+  function download(name, text, type) {
+    var blob = new Blob([text], { type: type || 'text/plain' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 600);
+  }
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+
+  var state = load();
+  var editingId = null;
+  var weekAnchor = todayStr();
+  var lastActivity = Date.now();
+  var idleShown = false;
+
+  /* ---------- activity tracking for idle detection ---------- */
+  ['mousemove', 'keydown', 'mousedown', 'touchstart', 'wheel'].forEach(function (ev) {
+    document.addEventListener(ev, function () {
+      lastActivity = Date.now();
+      if (idleShown) { hideIdle(); }
+    }, { passive: true });
+  });
+
+  /* ---------- projects ---------- */
+  function renderProjects() {
+    var ul = $('projects-list');
+    ul.innerHTML = '';
+    if (!state.projects.length) {
+      ul.innerHTML = '<li class="text-xs text-stone-500 rounded-xl border border-dashed border-edge p-3 text-center">No projects yet — add your first one above.</li>';
+    }
+    state.projects.forEach(function (p, i) {
+      var li = document.createElement('li');
+      li.className = 'flex items-center gap-2 rounded-xl border border-edge bg-black/30 px-3 py-2';
+      li.innerHTML =
+        '<span class="flex-1 min-w-0"><span class="block text-sm font-semibold text-stone-100 truncate">' + esc(p.name) + '</span></span>' +
+        '<span class="flex items-center gap-1 text-xs text-stone-400">$<input data-rate="' + i + '" type="number" min="0" step="0.01" value="' + p.rate.toFixed(2) + '" class="w-16 rounded-lg bg-hive border border-edge px-1.5 py-1 text-xs text-right outline-none focus:border-amberx">/hr</span>' +
+        '<button data-delproj="' + i + '" class="text-stone-600 hover:text-red-400 text-sm px-1" title="Delete project">✕</button>';
+      ul.appendChild(li);
+    });
+    var opts = state.projects.length
+      ? state.projects.map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + ' — $' + p.rate.toFixed(2) + '/hr</option>'; }).join('')
+      : '<option value="">Add a project first</option>';
+    $('timer-project').innerHTML = opts;
+    $('entry-project').innerHTML = opts;
+  }
+
+  $('add-proj-btn').addEventListener('click', function () {
+    var res = validateProject({ name: $('proj-name').value, rate: $('proj-rate').value });
+    var err = $('proj-error');
+    if (!res.ok) { err.textContent = res.errors.join(' '); err.classList.remove('hidden'); return; }
+    err.classList.add('hidden');
+    state.projects.push(res.project);
+    save();
+    $('proj-name').value = ''; $('proj-rate').value = '';
+    renderProjects(); renderAll();
+  });
+
+  $('projects-list').addEventListener('click', function (e) {
+    var d = e.target.getAttribute && e.target.getAttribute('data-delproj');
+    if (d !== null && d !== undefined && d !== '') {
+      var idx = parseInt(d, 10);
+      var p = state.projects[idx];
+      if (p && window.confirm('Delete project "' + p.name + '"? Its entries become "Archived / unknown".')) {
+        if (state.running && state.running.projectId === p.id) stopTimer(Date.now(), false);
+        state.projects.splice(idx, 1);
+        save(); renderProjects(); renderAll();
+      }
+    }
+  });
+
+  $('projects-list').addEventListener('change', function (e) {
+    var r = e.target.getAttribute && e.target.getAttribute('data-rate');
+    if (r !== null && r !== undefined && r !== '') {
+      var v = parseRate(e.target.value);
+      if (v !== null) { state.projects[parseInt(r, 10)].rate = v; save(); renderProjects(); renderAll(); }
+    }
+  });
+
+  /* ---------- timer ---------- */
+  function stopTimer(endMs, bankIt) {
+    if (!state.running) return;
+    var entry = trimRunningTimer(state.running, endMs);
+    state.running = null;
+    if (bankIt && entry) state.entries.push(entry);
+    save();
+  }
+
+  function startTimer() {
+    var pid = $('timer-project').value;
+    if (!pid) { $('timer-project-name').textContent = 'Add a project first'; return; }
+    if (state.running) stopTimer(Date.now(), true);
+    state.running = { projectId: pid, startMs: Date.now() };
+    lastActivity = Date.now();
+    save();
+    renderTimer();
+  }
+
+  $('timer-start-btn').addEventListener('click', function () {
+    if (state.running) { stopTimer(Date.now(), true); renderAll(); }
+    else startTimer();
+  });
+
+  function renderTimer() {
+    var btn = $('timer-start-btn');
+    var dot = $('timer-dot');
+    var txt = $('timer-state-text');
+    if (state.running) {
+      var p = state.projects.filter(function (x) { return x.id === state.running.projectId; })[0];
+      btn.textContent = 'Stop timer';
+      btn.style.background = 'linear-gradient(90deg,#f87171,#ef4444)';
+      dot.className = 'rec-dot inline-block h-2.5 w-2.5 rounded-full';
+      dot.style.background = '#f87171';
+      txt.textContent = 'Recording';
+      txt.style.color = '#f87171';
+      $('timer-project-name').textContent = p ? ('Tracking: ' + p.name + ' @ $' + p.rate.toFixed(2) + '/hr') : 'Tracking';
+    } else {
+      btn.textContent = 'Start timer';
+      btn.style.background = 'linear-gradient(90deg,#fbbf24,#f59e0b)';
+      dot.className = 'rec-dot inline-block h-2.5 w-2.5 rounded-full bg-stone-600';
+      dot.style.background = '';
+      txt.textContent = 'Idle';
+      txt.style.color = '';
+      $('timer-display').textContent = '00:00:00';
+      $('timer-project-name').textContent = 'No project selected';
+    }
+  }
+
+  function tick() {
+    var now = Date.now();
+    if (state.running) {
+      $('timer-display').textContent = fmtHMS(Math.floor((now - state.running.startMs) / 1000));
+      var threshold = parseInt($('idle-minutes').value, 10);
+      if (isNaN(threshold) || threshold < 1) threshold = 15;
+      if (!idleShown && shouldPromptIdle(lastActivity, now, threshold)) {
+        idleShown = true;
+        var mins = Math.floor(idleMs(lastActivity, now) / 60000);
+        $('idle-text').textContent = 'No activity detected for about ' + mins + ' minute' + (mins === 1 ? '' : 's') + ' while the timer was running. What should HourHive do with the idle stretch?';
+        $('idle-banner').classList.remove('hidden');
+      }
+      /* live stats refresh while running */
+      renderStats(now);
+    }
+  }
+  setInterval(tick, 1000);
+
+  function hideIdle() {
+    $('idle-banner').classList.add('hidden');
+    idleShown = false;
+    lastActivity = Date.now();
+  }
+
+  $('idle-keep-btn').addEventListener('click', hideIdle);
+  $('idle-trim-btn').addEventListener('click', function () {
+    if (state.running) {
+      var entry = trimRunningTimer(state.running, lastActivity);
+      if (entry) state.entries.push(entry);
+      state.running.startMs = Date.now();
+      save();
+    }
+    hideIdle(); renderAll();
+  });
+  $('idle-stop-btn').addEventListener('click', function () {
+    if (state.running) stopTimer(lastActivity, true);
+    hideIdle(); renderAll();
+  });
+
+  /* ---------- stats ---------- */
+  function renderStats(now) {
+    now = now || Date.now();
+    var t = todayStr();
+    var todaySecs = secondsOnDate(state.entries, t, now);
+    var wk = weeklyBuckets(state.entries, t, now);
+    var wkSecs = wk ? wk.days.reduce(function (a, d) { return a + d.seconds; }, 0) : 0;
+    var gt = grandTotals(state.entries, state.projects, now);
+    $('stat-today').textContent = fmtDur(todaySecs);
+    $('stat-week').textContent = fmtDur(wkSecs);
+    var weekBill = 0;
+    if (wk) {
+      var ws = weekStartMs(t);
+      var perProj = projectTotals(state.entries, state.projects, now);
+      /* billable for this week's entries only: recompute via overlap */
+      var wsum = {};
+      state.entries.forEach(function (e) {
+        var n = normEntry(e, now);
+        if (!n || !ws) return;
+        var secs = overlapSeconds(e, ws, ws + 7 * 86400000, now);
+        if (secs > 0) wsum[n.projectId] = (wsum[n.projectId] || 0) + secs;
+      });
+      perProj.forEach(function (p) {
+        var s = wsum[p.id] || 0;
+        weekBill += round2((s / 3600) * p.rate);
+      });
+    }
+    $('stat-billable').textContent = fmtMoney(weekBill);
+    $('stat-projects').textContent = gt.projectCount;
+  }
+
+  /* ---------- weekly chart ---------- */
+  function shiftWeek(dir) {
+    var r = dayRangeMs(weekAnchor);
+    if (!r) return;
+    var d = new Date(r.start + dir * 7 * 86400000);
+    weekAnchor = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+    renderWeek();
+  }
+  $('week-prev-btn').addEventListener('click', function () { shiftWeek(-1); });
+  $('week-next-btn').addEventListener('click', function () { shiftWeek(1); });
+
+  function renderWeek() {
+    var now = Date.now();
+    var wk = weeklyBuckets(state.entries, weekAnchor, now);
+    var box = $('week-chart');
+    box.innerHTML = '';
+    if (!wk) { box.innerHTML = '<div class="text-xs text-stone-500">No data.</div>'; return; }
+    var max = Math.max.apply(null, wk.days.map(function (d) { return d.seconds; }).concat([1]));
+    var total = 0;
+    wk.days.forEach(function (d) {
+      total += d.seconds;
+      var hPct = Math.round((d.seconds / max) * 100);
+      var col = document.createElement('div');
+      col.className = 'flex-1 flex flex-col items-center justify-end h-full gap-1.5';
+      var isToday = d.date === todayStr();
+      col.innerHTML =
+        '<div class="text-[10px] font-mono2 ' + (d.seconds ? 'text-stone-300' : 'text-stone-600') + '">' + fmtDur(d.seconds) + '</div>' +
+        '<div class="bar-col w-full rounded-t-lg" style="height:' + Math.max(hPct, d.seconds ? 4 : 0) + '%;' +
+          (d.seconds ? 'background:linear-gradient(180deg,#fbbf24,#b45309)' : 'background:#2c251a') + '"></div>' +
+        '<div class="text-[10px] uppercase tracking-wide ' + (isToday ? 'text-amberx font-bold' : 'text-stone-500') + '">' + d.label + '</div>';
+      col.title = d.date + ': ' + fmtDur(d.seconds);
+      box.appendChild(col);
+    });
+    $('week-label').textContent = wk.weekStart;
+    $('week-total').textContent = 'Week total: ' + fmtDur(total) + ' (' + secsToHours(total).toFixed(2) + 'h)';
+  }
+
+  /* ---------- donut ---------- */
+  function renderDonut() {
+    var now = Date.now();
+    var ws = weekStartMs(todayStr());
+    var inWeek = [];
+    if (ws) {
+      state.entries.forEach(function (e) {
+        var n = normEntry(e, now);
+        if (n && n.start < ws + 7 * 86400000 && n.end > ws) inWeek.push(e);
+      });
+    }
+    var segs = donutSegments(inWeek, state.projects, now);
+    var svg = $('donut-chart');
+    var NS = 'http://www.w3.org/2000/svg';
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var R = 58, C = 2 * Math.PI * R, cx = 75, cy = 75;
+    var bg = document.createElementNS(NS, 'circle');
+    bg.setAttribute('cx', cx); bg.setAttribute('cy', cy); bg.setAttribute('r', R);
+    bg.setAttribute('fill', 'none'); bg.setAttribute('stroke', '#2c251a'); bg.setAttribute('stroke-width', '22');
+    svg.appendChild(bg);
+    var acc = 0;
+    segs.forEach(function (s, i) {
+      var c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', R);
+      c.setAttribute('fill', 'none');
+      c.setAttribute('stroke', DONUT_COLORS[i % DONUT_COLORS.length]);
+      c.setAttribute('stroke-width', '22');
+      c.setAttribute('stroke-dasharray', (s.frac * C).toFixed(2) + ' ' + C.toFixed(2));
+      c.setAttribute('stroke-dashoffset', (-acc * C).toFixed(2));
+      svg.appendChild(c);
+      acc += s.frac;
+    });
+    var total = segs.reduce(function (a, s) { return a + s.seconds; }, 0);
+    $('donut-total').textContent = total >= 3600 ? (total / 3600).toFixed(1) + 'h' : fmtDur(total);
+    var leg = $('donut-legend');
+    leg.innerHTML = '';
+    if (!segs.length) {
+      leg.innerHTML = '<li class="text-xs text-stone-500">No tracked time this week yet. Start a timer above.</li>';
+      return;
+    }
+    segs.forEach(function (s, i) {
+      var li = document.createElement('li');
+      li.className = 'flex items-center gap-2.5 rounded-xl border border-edge bg-black/30 px-3 py-2';
+      li.innerHTML =
+        '<span class="inline-block h-3 w-3 rounded-sm shrink-0" style="background:' + DONUT_COLORS[i % DONUT_COLORS.length] + '"></span>' +
+        '<span class="flex-1 min-w-0"><span class="block text-sm font-semibold text-stone-100 truncate">' + esc(s.name) + '</span>' +
+        '<span class="block text-[11px] text-stone-500">' + Math.round(s.frac * 100) + '% · ' + fmtDur(s.seconds) + '</span></span>' +
+        '<span class="font-mono2 text-sm font-bold" style="color:#34d399">' + fmtMoney(s.billable) + '</span>';
+      leg.appendChild(li);
+    });
+  }
+
+  /* ---------- manual entries ---------- */
+  function resetEntryForm() {
+    editingId = null;
+    $('entry-form-title').textContent = 'Manual Entry';
+    $('add-entry-btn').textContent = 'Add entry';
+    $('cancel-edit-btn').classList.add('hidden');
+    $('entry-date').value = todayStr();
+    $('entry-start').value = ''; $('entry-end').value = ''; $('entry-note').value = '';
+  }
+
+  $('add-entry-btn').addEventListener('click', function () {
+    var res = validateEntry({
+      id: editingId || undefined,
+      projectId: $('entry-project').value,
+      date: $('entry-date').value,
+      startTime: $('entry-start').value,
+      endTime: $('entry-end').value,
+      note: $('entry-note').value
+    }, state.projects);
+    var err = $('entry-error');
+    if (!res.ok) { err.textContent = res.errors.join(' '); err.classList.remove('hidden'); return; }
+    err.classList.add('hidden');
+    if (editingId) {
+      var ix = state.entries.findIndex(function (e) { return e.id === editingId; });
+      if (ix !== -1) state.entries[ix] = res.entry;
+    } else {
+      state.entries.push(res.entry);
+    }
+    save();
+    resetEntryForm();
+    renderAll();
+  });
+
+  $('cancel-edit-btn').addEventListener('click', resetEntryForm);
+
+  function projName(id) {
+    var p = state.projects.filter(function (x) { return x.id === id; })[0];
+    return p ? p.name : 'Archived / unknown';
+  }
+  function projRate(id) {
+    var p = state.projects.filter(function (x) { return x.id === id; })[0];
+    return p ? p.rate : 0;
+  }
+
+  function renderEntries() {
+    var ul = $('entries-list');
+    ul.innerHTML = '';
+    var rows = state.entries.slice().sort(function (a, b) { return (b.start || 0) - (a.start || 0); }).slice(0, 60);
+    if (!rows.length) {
+      ul.innerHTML = '<li class="text-xs text-stone-500 rounded-xl border border-dashed border-edge p-3 text-center">No entries yet — start the timer or add one manually.</li>';
+      return;
+    }
+    rows.forEach(function (e) {
+      var n = normEntry(e);
+      if (!n) return;
+      var secs = Math.round((n.end - n.start) / 1000);
+      var rate = projRate(n.projectId);
+      var bill = round2((secs / 3600) * rate);
+      var li = document.createElement('li');
+      li.className = 'rounded-xl border border-edge bg-black/30 px-3 py-2';
+      li.innerHTML =
+        '<div class="flex items-center gap-2">' +
+          '<div class="flex-1 min-w-0"><span class="text-sm font-semibold text-stone-100">' + esc(projName(n.projectId)) + '</span>' +
+          '<div class="text-[11px] text-stone-500 font-mono2">' + entryDateLabel(n.start) + ' · ' + entryTimeLabel(n.start) + '–' + entryTimeLabel(n.end) + ' · ' + fmtDur(secs) + '</div>' +
+          (n.note ? '<div class="text-[11px] text-stone-400 truncate">' + esc(n.note) + '</div>' : '') + '</div>' +
+          '<span class="font-mono2 text-sm font-bold shrink-0" style="color:#34d399">' + fmtMoney(bill) + '</span>' +
+          '<button data-edit="' + esc(n.id) + '" class="text-xs px-2 py-1 rounded-lg border border-edge text-stone-400 hover:text-amberx hover:border-amberx transition shrink-0">Edit</button>' +
+          '<button data-delentry="' + esc(n.id) + '" class="text-xs px-2 py-1 rounded-lg text-stone-600 hover:text-red-400 transition shrink-0">✕</button>' +
+        '</div>';
+      ul.appendChild(li);
+    });
+  }
+
+  $('entries-list').addEventListener('click', function (e) {
+    var ed = e.target.getAttribute && e.target.getAttribute('data-edit');
+    var del = e.target.getAttribute && e.target.getAttribute('data-delentry');
+    if (ed) {
+      var n = normEntry(state.entries.filter(function (x) { return x.id === ed; })[0]);
+      if (!n) return;
+      editingId = n.id;
+      $('entry-form-title').textContent = 'Edit Entry';
+      $('add-entry-btn').textContent = 'Save changes';
+      $('cancel-edit-btn').classList.remove('hidden');
+      $('entry-project').value = n.projectId;
+      $('entry-date').value = entryDateLabel(n.start);
+      $('entry-start').value = entryTimeLabel(n.start);
+      $('entry-end').value = entryTimeLabel(n.end);
+      $('entry-note').value = n.note;
+      $('entry-form-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (del) {
+      state.entries = state.entries.filter(function (x) { return x.id !== del; });
+      if (editingId === del) resetEntryForm();
+      save(); renderAll();
+    }
+  });
+
+  /* ---------- export / backup / restore ---------- */
+  $('export-csv-btn').addEventListener('click', function () {
+    var csv = buildCSV(state.entries, state.projects);
+    download('hourhive-invoice.csv', csv, 'text/csv');
+  });
+
+  $('backup-btn').addEventListener('click', function () {
+    download('hourhive-backup.json', buildBackup({ projects: state.projects, entries: state.entries }), 'application/json');
+  });
+
+  $('restore-btn').addEventListener('click', function () { $('restore-input').click(); });
+  $('restore-input').addEventListener('change', function () {
+    var f = $('restore-input').files && $('restore-input').files[0];
+    var msg = $('restore-msg');
+    msg.classList.remove('hidden');
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var res = validateBackup(String(reader.result || ''));
+      if (!res.ok) {
+        msg.textContent = 'Restore failed: ' + res.errors.join(' ');
+        msg.style.color = '#f87171';
+        return;
+      }
+      if (state.running) state.running = null;
+      state.projects = res.data.projects;
+      state.entries = res.data.entries;
+      save();
+      msg.textContent = 'Restored ' + state.projects.length + ' projects and ' + state.entries.length + ' entries.';
+      msg.style.color = '#34d399';
+      renderProjects(); resetEntryForm(); renderAll();
+    };
+    reader.readAsText(f);
+    $('restore-input').value = '';
+  });
+
+  /* ---------- boot ---------- */
+  function renderAll() {
+    renderTimer();
+    renderStats();
+    renderWeek();
+    renderDonut();
+    renderEntries();
+  }
+
+  renderProjects();
+  resetEntryForm();
+  renderAll();
+})();
+</script>
+</body>
+</html>
